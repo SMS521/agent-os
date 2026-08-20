@@ -65,8 +65,39 @@ Eight subsystems, each its own module:
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
-cp .env.example .env   # fill in ANTHROPIC_API_KEY
+cp .env.example .env   # fill in ANTHROPIC_API_KEY — or read "Authentication" below, you may not need to
 ```
+
+### Authentication — an API key is optional
+
+`claude-agent-sdk` doesn't call the Messages API directly; it shells out to
+your local `claude` CLI and lets *that* resolve credentials. Two ways to
+authenticate, pick one:
+
+1. **Anthropic Console API key** (pay-as-you-go). Create one at
+   [console.anthropic.com](https://console.anthropic.com) → API Keys, put it
+   in `.env` as `ANTHROPIC_API_KEY=sk-ant-...`. Metered billing —
+   `config/policy.yaml`'s `max_budget_usd_per_run` (default `$20`) is a real
+   dollar ceiling under this mode.
+
+2. **An existing Claude Code login** (Pro/Max/Team subscription, no
+   separate key). Run `claude login` once, then leave `ANTHROPIC_API_KEY`
+   unset — don't put a line for it in `.env` at all. `agentos` will pick up
+   whatever the CLI is already authenticated with.
+
+   **This draws from your subscription's rate-limited usage window, not a
+   dollar budget** — `max_budget_usd_per_run` has no meaning here, since
+   there's no per-token cost to sum against it. Watch the session count
+   instead: one `agentos run` opens a *separate SDK session per task, plus
+   one per validator reviewing that task* — a 5-task goal with one
+   validator each is already 10 sessions, and `delegated`/`autonomous`-tier
+   agents can chain several tasks unattended in one run. Start with
+   `agentos plan` (one session, read-only) to see the shape of a goal
+   before committing a subscription window to `agentos run`.
+
+If both are configured, the API key wins (standard Anthropic SDK
+credential precedence) — leave it unset in `.env` if you specifically want
+the subscription path.
 
 See only what the Planner would do, without running any agent:
 
