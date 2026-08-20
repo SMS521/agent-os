@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 
 from agentos.approvals import ApprovalQueue
 from agentos.evaluation import evaluate
@@ -63,7 +64,13 @@ class Orchestrator:
         self.log = RunLog()
         self.spent_usd = 0.0
 
-    async def run(self) -> RunLog:
+    async def run(self, *, stop_after_phase: Optional[str] = None) -> RunLog:
+        """Walk phases in sequence. `stop_after_phase`, if given, must name a
+        real phase id (validated by the caller); once that phase completes
+        cleanly, the run stops deliberately, before the next phase's roster
+        ever activates — e.g. `stop_after_phase="architecture"` means
+        `development` (and whatever agent has Write/Edit/Bash there) never
+        runs at all, not "runs but its output is discarded"."""
         current = self.phases.next_phase(None)
         while current is not None:
             self.phases.activate(current)
@@ -80,6 +87,11 @@ class Orchestrator:
 
             self.phases.complete(current)
             self.log.add(f"phase {current}: complete")
+
+            if stop_after_phase is not None and current == stop_after_phase:
+                self.log.add(f"stopping after phase {current!r} per --stop-after")
+                break
+
             current = self.phases.next_phase(current)
 
         self.log.add(f"run finished — {self.graph.summary()}")

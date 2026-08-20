@@ -81,16 +81,30 @@ def plan(goal: str, repo: Optional[str]) -> None:
 @cli.command()
 @click.argument("goal")
 @click.option("--repo", default=None, help="Target repo root (default: $AGENTOS_WORKDIR or cwd).")
-def run(goal: str, repo: Optional[str]) -> None:
+@click.option(
+    "--stop-after",
+    "stop_after",
+    default=None,
+    help="Phase id to stop after (e.g. 'architecture'). The run completes that phase "
+    "and then stops deliberately -- later phases (and whichever agent's Write/Edit/Bash "
+    "access lives there) never activate at all. Omit to run every phase.",
+)
+def run(goal: str, repo: Optional[str], stop_after: Optional[str]) -> None:
     """Plan, then orchestrate the goal end to end: agents, evaluation, release, approvals."""
     root = _target_repo(repo)
     registry, permissions = _load_engines()
     state_dir = _state_dir(root)
     approvals = ApprovalQueue(state_dir / "approvals.json")
 
+    if stop_after is not None and stop_after not in registry.phases:
+        raise click.BadParameter(
+            f"--stop-after {stop_after!r} is not a known phase id "
+            f"({sorted(registry.phases)})"
+        )
+
     graph = asyncio.run(run_planner(goal, registry, root))
     orchestrator = Orchestrator(registry, graph, permissions, approvals, root)
-    log = asyncio.run(orchestrator.run())
+    log = asyncio.run(orchestrator.run(stop_after_phase=stop_after))
 
     run_id = new_run_id()
     path = RunStateStore(state_dir).save(run_id, goal, graph, log.entries)
