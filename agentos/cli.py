@@ -9,6 +9,7 @@ independent on purpose — one agent-os installation can point at many repos.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 from pathlib import Path
 from typing import Optional
@@ -41,7 +42,16 @@ def _target_repo(explicit: Optional[str]) -> Path:
 
 def _state_dir(repo_root: Path) -> Path:
     env = os.environ.get("AGENTOS_STATE_DIR")
-    return Path(env).resolve() if env else repo_root / "state"
+    if env:
+        return Path(env).resolve()
+    # Default lives under *this* agent-os checkout, keyed by the target
+    # repo's resolved path — never inside the target repo itself. The
+    # previous default (`repo_root / "state"`) put agent-os's own run state,
+    # including the approval queue, inside whatever --repo pointed at:
+    # untracked, but one `git add -A` (i.e. any successful release) away
+    # from being swept into that repo's own commit history.
+    key = f"{repo_root.name}-{hashlib.sha256(str(repo_root).encode()).hexdigest()[:10]}"
+    return _PACKAGE_ROOT / "state" / key
 
 
 def _load_engines() -> tuple[Registry, PermissionEngine]:

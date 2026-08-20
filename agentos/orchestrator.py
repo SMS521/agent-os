@@ -153,6 +153,18 @@ class Orchestrator:
         except GitOpsError as exc:
             self.log.add(f"{task.task_id}: committed {sha[:8]} to {branch} locally, push failed ({exc})")
 
+        try:
+            checkout(self.repo_root, "main")
+        except GitOpsError as exc:
+            # The commit above already succeeded and is safe on `branch` regardless
+            # of this — but leaving the tree on a feature branch would mean the
+            # *next* task's agent starts from the wrong baseline. Log it loudly
+            # rather than silently letting every subsequent task run on stale state.
+            self.log.add(
+                f"{task.task_id}: WARNING could not return to main after release ({exc}) — "
+                f"working tree is still on {branch}, next task will start from there"
+            )
+
         decision = self.permissions.can_promote(agent, task)
         if decision.allowed:
             self.approvals.auto_approve(
