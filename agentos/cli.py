@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 import click
+from dotenv import load_dotenv
 
 from agentos.approvals import ApprovalQueue
 from agentos.git_ops import GitOpsError, merge_to_main
@@ -24,6 +25,11 @@ from agentos.registry import Registry
 from agentos.state import RunStateStore, new_run_id
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
+
+# Load agent-os/.env (ANTHROPIC_API_KEY, AGENTOS_STATE_DIR, AGENTOS_WORKDIR)
+# before anything else runs. Only fills in variables not already set in the
+# real environment — an exported ANTHROPIC_API_KEY always wins over .env.
+load_dotenv(_PACKAGE_ROOT / ".env")
 
 
 def _target_repo(explicit: Optional[str]) -> Path:
