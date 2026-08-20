@@ -161,6 +161,11 @@ class PermissionEngine:
 
     def can_promote(self, agent: AgentSpec, task: Task) -> Decision:
         """Whether `task` may be promoted/deployed without a human, per policy.yaml."""
+        if task.human_approval_required:
+            return Decision(
+                False, True,
+                "task explicitly flagged human_approval_required by the Planner",
+            )
         tier = self.tier_for(agent)
         if not tier.promote_without_human:
             return Decision(False, True, f"tier {tier.name!r} cannot auto-promote")

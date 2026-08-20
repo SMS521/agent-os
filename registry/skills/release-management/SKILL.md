@@ -17,10 +17,12 @@ before. Committing unreviewed work is not this skill's job.
 - Commit to a feature/research branch via `agentos.git_ops`, never straight
   to `main` — `git_commit_main` is `false` at every autonomy tier, always,
   regardless of what `config/policy.yaml` otherwise grants.
-- Check the task's `task_type` against `promotable_task_types` in
-  `config/policy.yaml` and its `risk_level`. Both conditions must hold —
-  listed type **and** not `high` risk — before you may auto-promote; either
-  one failing means you open it for human approval and stop there.
+- Check three things before you may auto-promote: the task's `task_type` is
+  listed in `promotable_task_types`, its `risk_level` isn't `high`, and it
+  doesn't carry `human_approval_required: true` — that flag is the
+  Planner's own explicit judgment and overrides everything else, including
+  an `autonomous`-tier agent. Any one of the three failing means you open
+  it for human approval and stop there.
 - Write a commit message that says what changed and why, not what tool
   produced it.
 - Record the promotion decision either way (auto-promoted, or waiting on

@@ -121,6 +121,19 @@ def test_can_promote_denied_for_task_type_not_listed():
     assert decision.allowed is False
 
 
+def test_can_promote_denied_when_planner_flagged_human_approval_required():
+    # A task that clears every other check — autonomous tier, promotable
+    # task_type, low risk — must still be denied if the Planner itself set
+    # human_approval_required=True. That flag is an override, not one more
+    # vote among several.
+    eng = load_engine()
+    agent = make_agent(autonomy="autonomous")
+    task = make_task(task_type="research_finding", risk_level="low", human_approval_required=True)
+    decision = eng.can_promote(agent, task)
+    assert decision.allowed is False
+    assert "human_approval_required" in decision.reason
+
+
 def test_max_tasks_per_cycle_by_tier():
     eng = load_engine()
     assert eng.max_tasks_per_cycle(make_agent(autonomy="supervised")) == 1
