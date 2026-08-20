@@ -1,0 +1,73 @@
+# The Permission Engine reads this file once per run. It answers exactly two
+# questions for every action an agent attempts:
+#   1. is this action allowed for this agent at all?
+#   2. if allowed, does it still need a human to approve it before it runs?
+#
+# This file can only narrow what a tool already granted in registry/agents.yaml
+# is allowed to do, and decide the approval requirement on top of that. It
+# can never hand an agent a tool its registry entry doesn't list.
+
+autonomy_tiers:
+  supervised:
+    description: >
+      Default tier. Every action in human_approval_required below waits for
+      a human, every run. Safest, slowest.
+    git_commit_feature_branch: false
+    git_commit_main: false
+    multi_task_per_cycle: false
+    promote_without_human: false
+
+  delegated:
+    description: >
+      Agents commit their own work-in-progress to non-main branches and can
+      chain multiple tasks in one unattended run. Anything that touches
+      main, production config, or a promotion decision still stops for a
+      human.
+    git_commit_feature_branch: true
+    git_commit_main: false
+    multi_task_per_cycle: true
+    promote_without_human: false
+
+  autonomous:
+    description: >
+      Highest tier. Agents may also promote a finding/build/deploy without a
+      human in the loop, for task types explicitly listed in
+      promotable_task_types below, and only when the task's risk_level is
+      not "high". This is a real risk surface — scope it per-agent,
+      per-task-type; never widen it without reading "Autonomy tiers" in the
+      README first.
+    git_commit_feature_branch: true
+    git_commit_main: false   # main is never auto-committed, even at this tier
+    multi_task_per_cycle: true
+    promote_without_human: true
+
+# Which task types the "autonomous" tier may promote/deploy without a human,
+# when the task also carries risk_level != high. Anything not listed here
+# always stops for a human, regardless of tier.
+promotable_task_types:
+  - research_finding   # write to a findings/report artifact
+  - staging_deploy      # deploy to a non-production environment
+  # production_deploy is intentionally absent — add it explicitly only if
+  # you mean it; see README "Autonomy tiers" before you do.
+
+# Actions that always require a human sign-off, no matter which tier is set —
+# the blast radius here is not something a policy file alone should decide.
+human_approval_required:
+  - git_push_main
+  - git_merge_to_main
+  - production_deploy
+  - spend_above_budget
+  - delete_repository
+  - modify_this_policy_file
+
+# Per-agent overrides, keyed by agent_id from registry/agents.yaml. Anything
+# not listed here uses that agent's registry `autonomy` field as-is.
+overrides: {}
+# example:
+#   qa-agent:
+#     autonomy_tier: supervised   # keep QA conservative even if others are delegated
+
+# Hard ceilings that apply no matter what a tier or override says.
+limits:
+  max_tasks_per_unattended_cycle: 8
+  max_budget_usd_per_run: 20

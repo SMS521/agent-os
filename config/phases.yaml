@@ -1,0 +1,45 @@
+# The Phase Engine's default lifecycle and, per phase, which agent_ids (from
+# registry/agents.yaml) the Orchestrator is allowed to activate. This is a
+# ceiling ("who's eligible this phase"), not a floor — the Planner can staff
+# fewer than the roster for a given goal.
+
+phases:
+  - id: planning
+    description: Turn the goal into requirements, risks and open questions.
+    roster: [product-agent, research-agent]
+    completion_criteria:
+      - requirements documented
+      - open questions listed with owners
+
+  - id: architecture
+    description: Decide the technical approach before code gets written.
+    roster: [architect-agent, security-agent]
+    completion_criteria:
+      - approach documented
+      - security agent has reviewed it
+
+  - id: development
+    description: Implement the work.
+    roster: [developer-agent, qa-agent]
+    completion_criteria:
+      - every task in this phase has PASSed evaluation
+
+  - id: review
+    description: Independent validation before anything is proposed for promotion.
+    roster: [qa-agent, security-agent, reviewer-agent]
+    completion_criteria:
+      - validators agree PASS
+      - findings/diffs are ready for promotion (human or autonomous-tier)
+
+  - id: release
+    description: Commit, propose for promotion, or deploy — gated by policy.yaml.
+    roster: [release-agent]
+    completion_criteria:
+      - artifact committed to a feature branch
+      - promotion decision recorded (human approval OR autonomous-tier auto-promote)
+
+# The default sequence a Planner falls back to when the goal doesn't imply
+# its own dependency graph. The Planner is still free to run tasks from
+# different phases in parallel when the DAG says nothing later depends on
+# them — this order is a fallback, not a lock.
+default_sequence: [planning, architecture, development, review, release]
