@@ -38,3 +38,16 @@ without a human once a run is underway (see README's "Autonomy tiers").
 This CLAUDE.md rule is a layer above that: it governs whether the
 orchestrating Claude session is allowed to *start* a run or approve a
 queued request at all, not what happens inside one once started.
+
+**This rule does not bind the individual agent sessions a run spawns**
+(`product-agent`, `developer-agent`, `qa-agent`, `release-agent`, etc.).
+Each is a single non-interactive SDK session with no chat channel back to
+a human mid-task; if one tries to "wait for an explicit yes" the way this
+file describes, it cannot receive an answer and fails its task by doing
+nothing instead. That happened for real on 2026-08-21 against
+`financial-event-radar`: `product-agent` read that repo's `CLAUDE.md`,
+applied this exact rule to itself, and spent all three of its attempts
+asking permission instead of doing its (harmless, read-only) job, until
+QA/review correctly failed and escalated it. A target repo's own
+`CLAUDE.md`, if it states an equivalent rule, needs the same carve-out —
+see `financial-event-radar/CLAUDE.md` for the corrected version.
